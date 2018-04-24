@@ -292,7 +292,6 @@ if __name__ == '__main__':
 
         deepQ = DeepQ(network_inputs, network_outputs, memorySize, discountFactor, learningRate, learnStart)
         deepQ.initNetworks(network_structure)
-        env.monitor.start(outdir, force=True, seed=None)
     else:
         #Load weights, monitor info and parameter info.
         #ADD TRY CATCH fro this else
@@ -309,16 +308,17 @@ if __name__ == '__main__':
             memorySize = d.get('memorySize')
             network_inputs = d.get('network_inputs')
             network_outputs = d.get('network_outputs')
-            network_layers = d.get('network_structure')
+            network_structure = d.get('network_structure')
             current_epoch = d.get('current_epoch')
 
         deepQ = DeepQ(network_inputs, network_outputs, memorySize, discountFactor, learningRate, learnStart)
-        deepQ.initNetworks(network_layers)
+        deepQ.initNetworks(network_structure)
         deepQ.loadWeights(weights_path)
 
         clear_monitor_files(outdir)
         copy_tree(monitor_path,outdir)
-        env.monitor.start(outdir, resume=True, seed=None)
+
+    env = gym.wrappers.Monitor(env, outdir,force=not continue_execution, resume=continue_execution)
 
     last100Scores = [0] * 100
     last100ScoresIndex = 0
@@ -361,7 +361,7 @@ if __name__ == '__main__':
                 print ("reached the end! :D")
                 done = True
 
-            env.monitor.flush(force=True)
+            env._flush(force=True)
             if done:
                 last100Scores[last100ScoresIndex] = t
                 last100ScoresIndex += 1
@@ -377,7 +377,7 @@ if __name__ == '__main__':
                     if (epoch)%100==0:
                         #save model weights and monitoring data every 100 epochs.
                         deepQ.saveModel('/tmp/turtle_c2_dqn_ep'+str(epoch)+'.h5')
-                        env.monitor.flush()
+                        env._flush()
                         copy_tree(outdir,'/tmp/turtle_c2_dqn_ep'+str(epoch))
                         #save simulation parameters.
                         parameter_keys = ['epochs','steps','updateTargetNetwork','explorationRate','minibatch_size','learnStart','learningRate','discountFactor','memorySize','network_inputs','network_outputs','network_structure','current_epoch']
@@ -396,5 +396,4 @@ if __name__ == '__main__':
         # explorationRate -= (2.0/epochs)
         explorationRate = max (0.05, explorationRate)
 
-    env.monitor.close()
     env.close()

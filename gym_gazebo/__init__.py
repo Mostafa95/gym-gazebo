@@ -105,8 +105,32 @@ register(
     entry_point='gym_gazebo.envs.gazebo_cartpole:GazeboCartPolev0Env',
 )
 
+register(
+    id='Box3DOF-v1',
+    entry_point='gym_gazebo.envs.modular_scara:Box3DOFv1Env',
+)
 # ARIACPickv0Env
 register(
     id='ARIACPick-v0',
     entry_point='gym_gazebo.envs.ARIAC:ARIACPickv0Env',
+)
+
+# MAIRA
+register(
+    id='MAIRASide3DOF-v0',
+    entry_point='gym_gazebo.envs.MAIRA:GazeboMAIRASide3DOFv0Env',
+)
+register(
+    id='MAIRATop3DOF-v0',
+    entry_point='gym_gazebo.envs.MAIRA:GazeboMAIRATop3DOFv0Env',
+)
+
+register(
+    id='MAIRANoGripper-v0',
+    entry_point='gym_gazebo.envs.MAIRA:GazeboMAIRANoGripperv0Env',
+)
+
+register(
+    id='MAIRAOrient-v0',
+    entry_point='gym_gazebo.envs.MAIRA:GazeboMAIRATopOrientv0Env',
 )
