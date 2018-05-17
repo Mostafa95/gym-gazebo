@@ -8,7 +8,7 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 import qlearn
-#import liveplot
+#import liveplot as LP
 
 def render():
     render_skip = 0 #Skip first X episodes.
@@ -25,8 +25,10 @@ if __name__ == '__main__':
     env = gym.make('GazeboCircuit2TurtlebotLidar-v0')
 
     outdir = '/tmp/gazebo_gym_experiments'
+    env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
+
     # env.monitor.start(outdir, force=True, seed=None)
-    #plotter = LivePlot(outdir)
+    #plotter = LP.LivePlot(outdir)
 
     last_time_steps = numpy.ndarray(0)
 
@@ -54,12 +56,12 @@ if __name__ == '__main__':
         #render() #defined above, not env.render()
 
         state = ''.join(map(str, observation))
-
+        
         for i in range(1500):
 
             # Pick an action based on the current state
             action = qlearn.chooseAction(state)
-
+            print 'SSSSSSSSSSSSSSSSSSSSSS',state
             # Execute the action and get feedback
             observation, reward, done, info = env.step(action)
             cumulated_reward += reward
@@ -82,7 +84,7 @@ if __name__ == '__main__':
         m, s = divmod(int(time.time() - start_time), 60)
         h, m = divmod(m, 60)
         print ("EP: "+str(x+1)+" - [alpha: "+str(round(qlearn.alpha,2))+" - gamma: "+str(round(qlearn.gamma,2))+" - epsilon: "+str(round(qlearn.epsilon,2))+"] - Reward: "+str(cumulated_reward)+"     Time: %d:%02d:%02d" % (h, m, s))
-
+       # plotter.plot()
     #Github table content
     print ("\n|"+str(total_episodes)+"|"+str(qlearn.alpha)+"|"+str(qlearn.gamma)+"|"+str(initial_epsilon)+"*"+str(epsilon_discount)+"|"+str(highest_reward)+"| PICTURE |")
 

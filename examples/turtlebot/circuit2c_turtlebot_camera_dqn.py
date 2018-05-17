@@ -14,7 +14,7 @@ import json
 import random
 import numpy as np
 from keras.models import Sequential, load_model
-from keras.initializations import normal
+from keras.initializers import normal
 from keras import optimizers
 from keras.optimizers import RMSprop
 from keras.layers import Convolution2D, Flatten, ZeroPadding2D
@@ -48,7 +48,7 @@ class DeepQ:
         """
         self.output_size = outputs
         self.memory = memory.Memory(memorySize)
-        self.discountFactor = discountFactor
+        self.discountFactor = discountFactor #gamma
         self.learnStart = learnStart
         self.learningRate = learningRate
 
@@ -242,7 +242,8 @@ if __name__ == '__main__':
 
         deepQ = DeepQ(network_outputs, memorySize, discountFactor, learningRate, learnStart)
         deepQ.initNetworks()
-        env.monitor.start(outdir, force=True, seed=None)
+        env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
+        #env.monitor.start(outdir, force=True, seed=None)
     else:
         #Load weights, monitor info and parameter info.
         with open(params_json) as outfile:
@@ -267,7 +268,8 @@ if __name__ == '__main__':
 
         clear_monitor_files(outdir)
         copy_tree(monitor_path,outdir)
-        env.monitor.start(outdir, resume=True, seed=None)
+        #env.monitor.start(outdir, resume=True, seed=None)
+        env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
 
     last100Rewards = [0] * 100
     last100RewardsIndex = 0
@@ -278,6 +280,7 @@ if __name__ == '__main__':
     #start iterating from 'current epoch'.
     for epoch in xrange(current_epoch+1, epochs+1, 1):
         observation = env.reset()
+        #print observation.
         cumulated_reward = 0
 
         # number of timesteps
@@ -304,7 +307,7 @@ if __name__ == '__main__':
                 print ("reached the end")
                 done = True
 
-            env.monitor.flush(force=True)
+            #env.monitor.flush(force=True)
             cumulated_reward += reward
 
             if done:
@@ -323,7 +326,7 @@ if __name__ == '__main__':
                     if (epoch)%100==0: 
                         #save model weights and monitoring data every 100 epochs. 
                         deepQ.saveModel('/tmp/turtle_c2c_dqn_ep'+str(epoch)+'.h5')
-                        env.monitor.flush()
+                        #env.monitor.flush()
                         copy_tree(outdir,'/tmp/turtle_c2c_dqn_ep'+str(epoch))
                         #save simulation parameters.
                         parameter_keys = ['explorationRate','minibatch_size','learnStart','learningRate','discountFactor','memorySize','network_outputs','current_epoch','stepCounter','EXPLORE','INITIAL_EPSILON','FINAL_EPSILON','loadsim_seconds']
@@ -337,5 +340,5 @@ if __name__ == '__main__':
             if stepCounter % 2500 == 0:
                 print("Frames = "+str(stepCounter))
 
-    env.monitor.close() #not needed in latest gym update
+#env.monitor.close() #not needed in latest gym update
     env.close()

@@ -9,7 +9,7 @@ import sys
 import argparse
 import numpy as np
 from scipy.interpolate import pchip
-
+#from gym.wrappers.monitor import * 
 class LivePlot(object):
     def __init__(self, outdir, data_key='episode_rewards', line_color='blue'):
         """
@@ -31,10 +31,12 @@ class LivePlot(object):
         plt.xlabel("episodes")
         plt.ylabel("cumulated episode rewards")
         fig = plt.gcf().canvas.set_window_title('averaged_simulation_graph')
-        matplotlib.rcParams.update({'font.size': 15})
+        matplotlib.rcParams.update({'font.size': 10})
 
     def plot(self, full=True, dots=False, average=0, interpolated=0):
-        results = gym.monitoring.monitor.load_results(self.outdir)
+        #results = gym.monitoring.monitor.load_results(self.outdir)
+        results =  gym.wrappers.monitor.load_results(self.outdir)
+        print 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA ',results
         data =  results[self.data_key]
         avg_data = []
 
@@ -91,7 +93,7 @@ def pause():
 
 if __name__ == '__main__':
 
-    outdir = '/tmp/gazebo_gym_experiments'
+    outdir = '/home/mostafa/GP_Training/gazebo_gym_experiments'
     plotter = LivePlot(outdir)
 
     parser = argparse.ArgumentParser()
@@ -106,5 +108,9 @@ if __name__ == '__main__':
         plotter.plot(full=True)
     else:
         plotter.plot(full=args.full, dots=args.dots, average=args.average, interpolated=args.interpolated)
+
+    plt_save_path = '/home/mostafa/GP_Training/gazebo_gym_experiments/plot.png'
+    plt.savefig(plt_save_path)
+    print ("Saved Plot !!")
 
     pause()

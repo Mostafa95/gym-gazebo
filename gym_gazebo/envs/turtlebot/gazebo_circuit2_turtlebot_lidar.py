@@ -28,11 +28,12 @@ class GazeboCircuit2TurtlebotLidarEnv(gazebo_env.GazeboEnv):
 
         self._seed()
 
-    def discretize_observation(self,data,new_ranges):
+    def discretize_observation(self,data,new_ranges = 10):
         discretized_ranges = []
         min_range = 0.2
         done = False
         mod = len(data.ranges)/new_ranges
+        
         for i, item in enumerate(data.ranges):
             if (i%mod==0):
                 if data.ranges[i] == float ('Inf') or np.isinf(data.ranges[i]):
@@ -45,6 +46,18 @@ class GazeboCircuit2TurtlebotLidarEnv(gazebo_env.GazeboEnv):
                 done = True
         return discretized_ranges,done
 
+
+    def calculate_observation(self,data):
+        min_range = 0.2
+        done = False
+        for i, item in enumerate(data.ranges):
+            if (min_range > data.ranges[i] > 0):
+                done = True
+
+        #print 'DDDDDDDDDDDDDDDATA.Ranges',type(data.ranges)
+        return data.ranges,done
+
+
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
@@ -56,30 +69,33 @@ class GazeboCircuit2TurtlebotLidarEnv(gazebo_env.GazeboEnv):
             self.unpause()
         except (rospy.ServiceException) as e:
             print ("/gazebo/unpause_physics service call failed")
-
+        
+        #print 'AAAAAction',action
         if action == 0: #FORWARD
             vel_cmd = Twist()
             vel_cmd.linear.x = 0.3
             vel_cmd.angular.z = 0.0
             self.vel_pub.publish(vel_cmd)
+           # print 'Moved FORWARD'
         elif action == 1: #LEFT
             vel_cmd = Twist()
-            vel_cmd.linear.x = 0.05
-            vel_cmd.angular.z = 0.3
+            vel_cmd.linear.x = 0.05#0.05
+            vel_cmd.angular.z = 0.3#1.5708#0.3
             self.vel_pub.publish(vel_cmd)
+         #   print 'moved LEFT'
         elif action == 2: #RIGHT
             vel_cmd = Twist()
-            vel_cmd.linear.x = 0.05
-            vel_cmd.angular.z = -0.3
+            vel_cmd.linear.x = 0.05#0.25#
+            vel_cmd.angular.z = -0.3#1.5708#
             self.vel_pub.publish(vel_cmd)
-
+          #  print 'moved RIGHT'
         data = None
         while data is None:
             try:
                 data = rospy.wait_for_message('/scan', LaserScan, timeout=5)
             except:
                 pass
-
+       # print 'DDDAAAATTTTAAAAAA',data
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             #resp_pause = pause.call()
@@ -87,7 +103,7 @@ class GazeboCircuit2TurtlebotLidarEnv(gazebo_env.GazeboEnv):
         except (rospy.ServiceException) as e:
             print ("/gazebo/pause_physics service call failed")
 
-        state,done = self.discretize_observation(data,5)
+        state,done = self.calculate_observation(data)
 
         if not done:
             if action == 0:
@@ -96,7 +112,7 @@ class GazeboCircuit2TurtlebotLidarEnv(gazebo_env.GazeboEnv):
                 reward = 1
         else:
             reward = -200
-
+       # print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAction : "+str(action)+" reward="+str(reward))
         return state, reward, done, {}
 
     def _reset(self):
@@ -132,6 +148,6 @@ class GazeboCircuit2TurtlebotLidarEnv(gazebo_env.GazeboEnv):
         except (rospy.ServiceException) as e:
             print ("/gazebo/pause_physics service call failed")
 
-        state = self.discretize_observation(data,5)
+        state = self.calculate_observation(data)
 
         return state

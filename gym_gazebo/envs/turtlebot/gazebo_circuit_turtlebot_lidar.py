@@ -28,7 +28,7 @@ class GazeboCircuitTurtlebotLidarEnv(gazebo_env.GazeboEnv):
 
         self._seed()
 
-    def discretize_observation(self,data,new_ranges):
+    def discretize_observation(self,data,new_ranges = 5):
         discretized_ranges = []
         min_range = 0.2
         done = False
@@ -44,6 +44,18 @@ class GazeboCircuitTurtlebotLidarEnv(gazebo_env.GazeboEnv):
             if (min_range > data.ranges[i] > 0):
                 done = True
         return discretized_ranges,done
+
+
+    def calculate_observation(self,data):
+        min_range = 0.2
+        done = False
+        for i, item in enumerate(data.ranges):
+            if (min_range > data.ranges[i] > 0):
+                done = True
+
+        #print 'DDDDDDDDDDDDDDDATA.Ranges',type(data.ranges)
+        return data.ranges,done
+
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -87,7 +99,7 @@ class GazeboCircuitTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         except (rospy.ServiceException) as e:
             print ("/gazebo/pause_physics service call failed")
 
-        state,done = self.discretize_observation(data,5)
+        state,done = self.calculate_observation(data)
 
         if not done:
             if action == 0:
@@ -132,6 +144,6 @@ class GazeboCircuitTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         except (rospy.ServiceException) as e:
             print ("/gazebo/pause_physics service call failed")
 
-        state = self.discretize_observation(data,5)
+        state = self.calculate_observation(data)
 
         return state

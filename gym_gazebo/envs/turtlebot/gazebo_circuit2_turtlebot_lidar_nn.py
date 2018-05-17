@@ -60,7 +60,7 @@ class GazeboCircuit2TurtlebotLidarNnEnv(gazebo_env.GazeboEnv):
                 data = rospy.wait_for_message('/scan', LaserScan, timeout=5)
             except:
                 pass
-
+                
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             #resp_pause = pause.call()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import matplotlib
 import matplotlib.pyplot as plt
-
+#import gym
 class LivePlot(object):
     def __init__(self, outdir, data_key='episode_rewards', line_color='blue'):
         """
@@ -25,6 +25,7 @@ class LivePlot(object):
 
     def plot(self):
         results = gym.monitoring.monitor.load_results(self.outdir)
+        #results =gym.monitoring.load_results(self.outdir)
         data =  results[self.data_key]
 
         #only update plot if data is different (plot calls are expensive)

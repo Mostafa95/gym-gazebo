@@ -145,10 +145,13 @@ class DeepQ:
 
     # predict Q values for all the actions
     def getQValues(self, state):
-        # print 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',state
-        # print '\n','AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',state.reshape(1,len(state))
-        predicted = self.model.predict(state.reshape(1,len(state)))
-
+        #print 'BBBBBBBBBBSTate',state,'\n',type(state)
+        # state = np.asarray(state[0])
+        #print 'AAAABBBBBBBBBBSTate',state,'\n',type(state)
+       # print 'AAAAAAAAAASTate',state.reshape(1,len(state)),'\n'
+        
+        predicted = self.model.predict(state.reshape(1,len(state)))#state.reshape(1,len(state))
+        #print 'Predicted Actions : ',predicted
         return predicted[0]
 
     def getTargetQValues(self, state):
@@ -177,8 +180,10 @@ class DeepQ:
     def selectAction(self, qValues, explorationRate):
         rand = random.random()
         if rand < explorationRate :
+            #print 'Action Selected Randomly'
             action = np.random.randint(0, self.output_size)
         else :
+            #print 'Max Q Action Selected'
             action = self.getMaxIndex(qValues)
         return action
 
@@ -228,9 +233,12 @@ class DeepQ:
                 action = sample['action']
                 reward = sample['reward']
                 newState = sample['newState']
-
+                
+                #print 'NNNNNNNNNNWsTate',newState,'\n',type(newState)
+                state = np.asarray(state)
+                newState = np.asarray(newState)
+                
                 qValues = self.getQValues(state)
-
                 if useTargetNetwork:
                     qValuesNewState = self.getTargetQValues(newState)
                 else :
@@ -248,7 +256,7 @@ class DeepQ:
 
     def saveModel(self, path):
         self.model.save(path)
-
+    
     def loadWeights(self, path):
         self.model.set_weights(load_model(path).get_weights())
 
@@ -264,33 +272,35 @@ def clear_monitor_files(training_dir):
         os.unlink(file)
 
 if __name__ == '__main__':
-
+    MAX_EP_STEPS = 10
     #REMEMBER!: turtlebot_nn_setup.bash must be executed.
-    env = gym.make('GazeboCircuit2TurtlebotLidarNn-v0')
-    outdir = '/tmp/gazebo_gym_experiments/'
+    env = gym.make('GazeboMazeTurtlebotLidar-v0') #GazeboCircuit2TurtlebotLidar-v0
+   
+    outdir = '/home/mostafa/GP_Training/New_logic/gazebo_gym_experiments/'
 
-    continue_execution = False
+    continue_execution = False  
     #fill this if continue_execution=True
 
-    weights_path = '/tmp/turtle_c2_dqn_ep200.h5'
-    monitor_path = '/tmp/turtle_c2_dqn_ep200'
-    params_json  = '/tmp/turtle_c2_dqn_ep200.json'
+    weights_path = '/home/mostafa/GP_Training/New_logic/turtle_c2_dqn_ep1600.h5'
+    monitor_path = '/home/mostafa/GP_Training/New_logic/turtle_c2_dqn_ep1600'
+    params_json  = '/home/mostafa/GP_Training/New_logic/turtle_c2_dqn_ep1600.json'
 
+    
     if not continue_execution:
         #Each time we take a sample and update our weights it is called a mini-batch.
         #Each time we run through the entire dataset, it's called an epoch.
         #PARAMETER LIST
         epochs = 1000
         steps = 10000
-        updateTargetNetwork = 10000
+        updateTargetNetwork = 5000
         explorationRate = 1
         minibatch_size = 64
-        learnStart = 64
+        learnStart = 128
         learningRate = 0.00025
         discountFactor = 0.99
         memorySize = 1000000
-        network_inputs = 100
-        network_outputs = 21
+        network_inputs =  100
+        network_outputs = 3#21
         network_structure = [300,300]
         current_epoch = 0
 
@@ -298,6 +308,7 @@ if __name__ == '__main__':
         deepQ.initNetworks(network_structure)
        # env.monitor.start(outdir, force=True, seed=None)
         env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
+       # env.spec.timestep_limit = MAX_EP_STEPS
     else:
         #Load weights, monitor info and parameter info.
         #ADD TRY CATCH fro this else
@@ -314,23 +325,24 @@ if __name__ == '__main__':
             memorySize = d.get('memorySize')
             network_inputs = d.get('network_inputs')
             network_outputs = d.get('network_outputs')
-            network_layers = d.get('network_structure')
+            network_structure = d.get('network_structure')
+            #print 'NETWORK_STRUCTURE',network_structure
             current_epoch = d.get('current_epoch')
 
         deepQ = DeepQ(network_inputs, network_outputs, memorySize, discountFactor, learningRate, learnStart)
-        deepQ.initNetworks(network_layers)
+        deepQ.initNetworks(network_structure)
         deepQ.loadWeights(weights_path)
 
         clear_monitor_files(outdir)
         copy_tree(monitor_path,outdir)
         env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
+        #env.spec.timestep_limit = MAX_EP_STEPS
         #env.monitor.start(outdir, resume=True, seed=None)
 
     last100Scores = [0] * 100
     last100ScoresIndex = 0
     last100Filled = False
     stepCounter = 0
-    highest_reward = 0
 
     start_time = time.time()
 
@@ -338,23 +350,40 @@ if __name__ == '__main__':
 
     for epoch in xrange(current_epoch+1, epochs+1, 1):
         observation = env.reset()
+        
         cumulated_reward = 0
-
+        t = 1
+        f=True
         # number of timesteps
-        for t in xrange(steps):
+        while(t>0):
             # env.render()
+            # print 'OOOOObservarion',observation
+            # time.sleep(2)
+
+            # if f == True:
+            #     time.sleep(20)
+            #     f = False
+            # else :
+            #     time.sleep(0.5) 
+            if type(observation[1]) == bool :
+                observation = observation[0]
+            
+            observation = np.asarray(observation)
+            
             qValues = deepQ.getQValues(observation)
 
             action = deepQ.selectAction(qValues, explorationRate)
 
-            newObservation, reward, done, info = env.step(action)
-
+            newObservation, reward, done, info = env.step(action) #info {bool terminated,}
+            New_Done = info[0] #New termination flag for new logic
             cumulated_reward += reward
-            if highest_reward < cumulated_reward:
-                highest_reward = cumulated_reward
+            
 
-            deepQ.addMemory(observation, action, reward, newObservation, done)
+            deepQ.addMemory(observation, action, reward, newObservation, New_Done)
 
+            if stepCounter == learnStart:
+                print("Starting learning")
+                
             if stepCounter >= learnStart:
                 if stepCounter <= updateTargetNetwork:
                     deepQ.learnOnMiniBatch(minibatch_size, False)
@@ -363,44 +392,47 @@ if __name__ == '__main__':
 
             observation = newObservation
 
-            if (t >= 1000):
-                print ("reached the end! :D")
-                done = True
+            # if (t == MAX_EP_STEPS):
+            #     print ("reached the end! :D")
+            #     done = True
 
             #env.monitor.flush(force=True)
-            if done:
+            if New_Done:
+                
                 last100Scores[last100ScoresIndex] = t
                 last100ScoresIndex += 1
                 if last100ScoresIndex >= 100:
                     last100Filled = True
                     last100ScoresIndex = 0
                 if not last100Filled:
-                    print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+"   Exploration="+str(round(explorationRate, 2)))
+                    print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+"   Exploration="+str(round(explorationRate, 2)) +" - Reward: "+str(cumulated_reward))
                 else :
                     m, s = divmod(int(time.time() - start_time), 60)
                     h, m = divmod(m, 60)
                     print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - last100 Steps : "+str((sum(last100Scores)/len(last100Scores)))+" - Cumulated R: "+str(cumulated_reward)+"   Eps="+str(round(explorationRate, 2))+"     Time: %d:%02d:%02d" % (h, m, s))
                     if (epoch)%100==0:
                         #save model weights and monitoring data every 100 epochs.
-                        deepQ.saveModel('/tmp/turtle_c2_dqn_ep'+str(epoch)+'.h5')
+                        deepQ.saveModel('/home/mostafa/GP_Training/turtle_c2_dqn_ep'+str(epoch)+'.h5')
                         #env.monitor.flush()
-                        copy_tree(outdir,'/tmp/turtle_c2_dqn_ep'+str(epoch))
+                        copy_tree(outdir,'/home/mostafa/GP_Training/turtle_c2_dqn_ep'+str(epoch))
                         #save simulation parameters.
                         parameter_keys = ['epochs','steps','updateTargetNetwork','explorationRate','minibatch_size','learnStart','learningRate','discountFactor','memorySize','network_inputs','network_outputs','network_structure','current_epoch']
                         parameter_values = [epochs, steps, updateTargetNetwork, explorationRate, minibatch_size, learnStart, learningRate, discountFactor, memorySize, network_inputs, network_outputs, network_structure, epoch]
                         parameter_dictionary = dict(zip(parameter_keys, parameter_values))
-                        with open('/tmp/turtle_c2_dqn_ep'+str(epoch)+'.json', 'w') as outfile:
+                        with open('/home/mostafa/GP_Training/turtle_c2_dqn_ep'+str(epoch)+'.json', 'w') as outfile:
                             json.dump(parameter_dictionary, outfile)
-                break
+                cumulated_reward = 0
+                #break
 
             stepCounter += 1
             if stepCounter % updateTargetNetwork == 0:
                 deepQ.updateTargetNetwork()
                 print ("updating target network")
-
-        explorationRate *= 0.995 #epsilon decay
+            
+            t = t+1
+            explorationRate *= 0.999 #epsilon decay
         # explorationRate -= (2.0/epochs)
-        explorationRate = max (0.05, explorationRate)
+            explorationRate = max (0.05, explorationRate)
 
-    env.monitor.close()
+    #env.monitor.close()
     env.close()

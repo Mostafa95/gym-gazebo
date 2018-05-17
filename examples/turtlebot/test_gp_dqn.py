@@ -5,6 +5,7 @@ Based on:
 https://github.com/vmayoral/basic_reinforcement_learning
 https://gist.github.com/wingedsheep/4199594b02138dd427c22a540d6d6b8d
 '''
+
 import gym
 import gym_gazebo
 import time
@@ -20,6 +21,8 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import LeakyReLU
 from keras.regularizers import l2
 import memory
+import rospy
+from nav_msgs.msg import OccupancyGrid
 
 class DeepQ:
     """
@@ -145,10 +148,13 @@ class DeepQ:
 
     # predict Q values for all the actions
     def getQValues(self, state):
-        # print 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',state
-        # print '\n','AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',state.reshape(1,len(state))
-        predicted = self.model.predict(state.reshape(1,len(state)))
-
+        #print 'BBBBBBBBBBSTate',state,'\n',type(state)
+        # state = np.asarray(state[0])
+        #print 'AAAABBBBBBBBBBSTate',state,'\n',type(state)
+       # print 'AAAAAAAAAASTate',state.reshape(1,len(state)),'\n'
+        
+        predicted = self.model.predict(state.reshape(1,len(state)))#state.reshape(1,len(state))
+        #print 'Predicted Actions : ',predicted
         return predicted[0]
 
     def getTargetQValues(self, state):
@@ -177,9 +183,16 @@ class DeepQ:
     def selectAction(self, qValues, explorationRate):
         rand = random.random()
         if rand < explorationRate :
+            #print 'Action Selected Randomly'
             action = np.random.randint(0, self.output_size)
         else :
+            #print 'Max Q Action Selected'
             action = self.getMaxIndex(qValues)
+        return action
+
+
+    def selectAction_ForTesting(self, qValues):    
+        action = self.getMaxIndex(qValues)
         return action
 
     def selectActionByProbability(self, qValues, bias):
@@ -228,9 +241,12 @@ class DeepQ:
                 action = sample['action']
                 reward = sample['reward']
                 newState = sample['newState']
-
+                
+                #print 'NNNNNNNNNNWsTate',newState,'\n',type(newState)
+                state = np.asarray(state)
+                newState = np.asarray(newState)
+                
                 qValues = self.getQValues(state)
-
                 if useTargetNetwork:
                     qValuesNewState = self.getTargetQValues(newState)
                 else :
@@ -248,7 +264,7 @@ class DeepQ:
 
     def saveModel(self, path):
         self.model.save(path)
-
+    
     def loadWeights(self, path):
         self.model.set_weights(load_model(path).get_weights())
 
@@ -263,144 +279,170 @@ def clear_monitor_files(training_dir):
         print(file)
         os.unlink(file)
 
+
+def callback(data):
+        #rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
+        print len(data.data)
+
+def initMapSubscriber():
+    #rospy.init_node('Maplistener', anonymous=True)
+    rospy.Subscriber("/map", OccupancyGrid,  callback) 
+    #rospy.spin()
+
+def Get_Observ(TurtleBot_path, Turtle_Num):
+    params_json = str(TurtleBot_path) + str(Turtle_Num) + '.json'
+    observation =  []
+    with open(params_json) as outfile:
+        d = json.load(outfile)
+        observation = d.get('obervation')
+    
+    return observation
+
+def Get_All(TurtleBot_path, Turtle_Num):
+    params_json = str(TurtleBot_path) + str(Turtle_Num) + '.json'
+
+    with open(params_json) as outfile:
+        d = json.load(outfile)
+        observation = d.get('obervation')
+        reward = d.get('reward')
+        done = d.get('done')
+        info = d.get('info')
+
+    return observation,reward,done,info
+
+def Write_Action(TurtleBot_path, Turtle_Num,Action):
+    ob = 0
+    re = 0
+    do = 0
+    info = 0 
+    parameter_keys = ['obervation','reward','done','info','action']
+    parameter_values = [ob, re, do, info, Action] 
+    parameter_dictionary = dict(zip(parameter_keys, parameter_values))
+    fileName =  str(TurtleBot_path) + str(Turtle_Num) + '.json'
+    with open(fileName, 'w') as outfile:
+        json.dump(parameter_dictionary, outfile)
+
+
 if __name__ == '__main__':
 
     #REMEMBER!: turtlebot_nn_setup.bash must be executed.
-    env = gym.make('GazeboCircuit2TurtlebotLidarNn-v0')
-    outdir = '/tmp/gazebo_gym_experiments/'
+    env = gym.make('GazeboMazeTurtlebotLidar-v0') #GazeboCircuit2TurtlebotLidar-v0 GazeboCircuit2TurtlebotLidar-v0
+   
+    outdir = '/home/mostafa/GP_Training/gazebo_gym_experiments/'
 
-    continue_execution = False
+    #continue_execution = True  
     #fill this if continue_execution=True
 
-    weights_path = '/tmp/turtle_c2_dqn_ep200.h5'
-    monitor_path = '/tmp/turtle_c2_dqn_ep200'
-    params_json  = '/tmp/turtle_c2_dqn_ep200.json'
+    weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300.h5'
+    monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300'
+    params_json  = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300.json'
 
-    if not continue_execution:
-        #Each time we take a sample and update our weights it is called a mini-batch.
-        #Each time we run through the entire dataset, it's called an epoch.
-        #PARAMETER LIST
-        epochs = 1000
-        steps = 10000
-        updateTargetNetwork = 10000
-        explorationRate = 1
-        minibatch_size = 64
-        learnStart = 64
-        learningRate = 0.00025
-        discountFactor = 0.99
-        memorySize = 1000000
-        network_inputs = 100
-        network_outputs = 21
-        network_structure = [300,300]
-        current_epoch = 0
+    TurtleBot_info_path = '/home/mostafa/GP_Training/TurtleBot/'
+    
+    
+    #Load weights, monitor info and parameter info.
+    #ADD TRY CATCH fro this else
+    with open(params_json) as outfile:
+        d = json.load(outfile)
+        epochs = d.get('epochs')
+        steps = d.get('steps')
+        updateTargetNetwork = d.get('updateTargetNetwork')
+        explorationRate = d.get('explorationRate')
+        minibatch_size = d.get('minibatch_size')
+        learnStart = d.get('learnStart')
+        learningRate = d.get('learningRate')
+        discountFactor = d.get('discountFactor')
+        memorySize = d.get('memorySize')
+        network_inputs = d.get('network_inputs')
+        network_outputs = d.get('network_outputs')
+        network_structure = d.get('network_structure')
+        current_epoch = d.get('current_epoch')
 
-        deepQ = DeepQ(network_inputs, network_outputs, memorySize, discountFactor, learningRate, learnStart)
-        deepQ.initNetworks(network_structure)
-       # env.monitor.start(outdir, force=True, seed=None)
-        env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
-    else:
-        #Load weights, monitor info and parameter info.
-        #ADD TRY CATCH fro this else
-        with open(params_json) as outfile:
-            d = json.load(outfile)
-            epochs = d.get('epochs')
-            steps = d.get('steps')
-            updateTargetNetwork = d.get('updateTargetNetwork')
-            explorationRate = d.get('explorationRate')
-            minibatch_size = d.get('minibatch_size')
-            learnStart = d.get('learnStart')
-            learningRate = d.get('learningRate')
-            discountFactor = d.get('discountFactor')
-            memorySize = d.get('memorySize')
-            network_inputs = d.get('network_inputs')
-            network_outputs = d.get('network_outputs')
-            network_layers = d.get('network_structure')
-            current_epoch = d.get('current_epoch')
+    deepQ = DeepQ(network_inputs, network_outputs, memorySize, discountFactor, learningRate, learnStart)
+    deepQ.initNetworks(network_structure)
+    deepQ.loadWeights(weights_path)
 
-        deepQ = DeepQ(network_inputs, network_outputs, memorySize, discountFactor, learningRate, learnStart)
-        deepQ.initNetworks(network_layers)
-        deepQ.loadWeights(weights_path)
 
-        clear_monitor_files(outdir)
-        copy_tree(monitor_path,outdir)
-        env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
-        #env.monitor.start(outdir, resume=True, seed=None)
-
-    last100Scores = [0] * 100
-    last100ScoresIndex = 0
-    last100Filled = False
-    stepCounter = 0
-    highest_reward = 0
+    clear_monitor_files(outdir)
+    copy_tree(monitor_path,outdir)
+    env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
 
     start_time = time.time()
-
+    f=True
     #start iterating from 'current epoch'.
 
     for epoch in xrange(current_epoch+1, epochs+1, 1):
-        observation = env.reset()
-        cumulated_reward = 0
+        observation0 = env.reset()
+        observation1 = Get_Observ(TurtleBot_info_path,1)
+        #print "Observation",observation1
+        cumulated_reward0 = 0
+        cumulated_reward1 = 0
 
         # number of timesteps
-        for t in xrange(steps):
-            # env.render()
-            qValues = deepQ.getQValues(observation)
+        t=1
+        time.sleep(2)
+        while( t > 0 ):
+            
+            # if f == True:
+            #     time.sleep(20)
+            #     f = False
+            # else :
+            #     time.sleep(0.5)    
+            if type(observation0[1]) == bool :
+                observation0 = observation0[0]
+            observation0 = np.asarray(observation0)
+            
+            if type(observation1[1]) == bool :
+                observation1 = observation1[0]
+            observation1 = np.asarray(observation1)
+            
+            
+            qValues0 = deepQ.getQValues(observation0)
+            qValues1 = deepQ.getQValues(observation1)
 
-            action = deepQ.selectAction(qValues, explorationRate)
+            action0 = deepQ.selectAction_ForTesting(qValues0)
+            action1 = deepQ.selectAction_ForTesting(qValues1)
 
-            newObservation, reward, done, info = env.step(action)
+            Write_Action(TurtleBot_info_path, 1, action1)
+            newObservation0, reward0, done0, info0 = env.step(action0)
+            newObservation1, reward1, done1, info1 = Get_All(TurtleBot_info_path, 1)
 
-            cumulated_reward += reward
-            if highest_reward < cumulated_reward:
-                highest_reward = cumulated_reward
+            cumulated_reward0 += reward0
+            cumulated_reward1 += reward1
+            
 
-            deepQ.addMemory(observation, action, reward, newObservation, done)
+            #deepQ.addMemory(observation, action, reward, newObservation, done)
 
-            if stepCounter >= learnStart:
-                if stepCounter <= updateTargetNetwork:
-                    deepQ.learnOnMiniBatch(minibatch_size, False)
-                else :
-                    deepQ.learnOnMiniBatch(minibatch_size, True)
+            # if stepCounter == learnStart:
+            #     print("Starting learning")
+                
+            # if stepCounter >= learnStart:
+            #     if stepCounter <= updateTargetNetwork:
+            #         deepQ.learnOnMiniBatch(minibatch_size, False)
+            #     else :
+            #         deepQ.learnOnMiniBatch(minibatch_size, True)
 
-            observation = newObservation
+            observation0 = newObservation0
+            observation1 = newObservation1
 
-            if (t >= 1000):
-                print ("reached the end! :D")
-                done = True
+            if done0:
+                print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - Cumulated0 R: "+str(cumulated_reward0))   
+            if done1:
+                 print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - Cumulated1 R: "+str(cumulated_reward1))     
+                 #break
+            t = t+1
+           
+            # if (time.time() - start_time) >= 10 and f ==True:
+            #     initMapSubscriber()
+            #     f=  False
+            #stepCounter += 1
+            # if stepCounter % updateTargetNetwork == 0:
+            #     deepQ.updateTargetNetwork()
+            #     print ("updating target network")
 
-            #env.monitor.flush(force=True)
-            if done:
-                last100Scores[last100ScoresIndex] = t
-                last100ScoresIndex += 1
-                if last100ScoresIndex >= 100:
-                    last100Filled = True
-                    last100ScoresIndex = 0
-                if not last100Filled:
-                    print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+"   Exploration="+str(round(explorationRate, 2)))
-                else :
-                    m, s = divmod(int(time.time() - start_time), 60)
-                    h, m = divmod(m, 60)
-                    print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - last100 Steps : "+str((sum(last100Scores)/len(last100Scores)))+" - Cumulated R: "+str(cumulated_reward)+"   Eps="+str(round(explorationRate, 2))+"     Time: %d:%02d:%02d" % (h, m, s))
-                    if (epoch)%100==0:
-                        #save model weights and monitoring data every 100 epochs.
-                        deepQ.saveModel('/tmp/turtle_c2_dqn_ep'+str(epoch)+'.h5')
-                        #env.monitor.flush()
-                        copy_tree(outdir,'/tmp/turtle_c2_dqn_ep'+str(epoch))
-                        #save simulation parameters.
-                        parameter_keys = ['epochs','steps','updateTargetNetwork','explorationRate','minibatch_size','learnStart','learningRate','discountFactor','memorySize','network_inputs','network_outputs','network_structure','current_epoch']
-                        parameter_values = [epochs, steps, updateTargetNetwork, explorationRate, minibatch_size, learnStart, learningRate, discountFactor, memorySize, network_inputs, network_outputs, network_structure, epoch]
-                        parameter_dictionary = dict(zip(parameter_keys, parameter_values))
-                        with open('/tmp/turtle_c2_dqn_ep'+str(epoch)+'.json', 'w') as outfile:
-                            json.dump(parameter_dictionary, outfile)
-                break
+        # explorationRate *= 0.995 #epsilon decay
+        # # explorationRate -= (2.0/epochs)
+        # explorationRate = max (0.05, explorationRate, explorationRate)
 
-            stepCounter += 1
-            if stepCounter % updateTargetNetwork == 0:
-                deepQ.updateTargetNetwork()
-                print ("updating target network")
-
-        explorationRate *= 0.995 #epsilon decay
-        # explorationRate -= (2.0/epochs)
-        explorationRate = max (0.05, explorationRate)
-
-    env.monitor.close()
+    #env.monitor.close()
     env.close()
