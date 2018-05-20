@@ -365,7 +365,7 @@ if __name__ == '__main__':
             if type(observation0[1]) == bool :
                 observation0 = observation0[0]
             observation0 = np.asarray(observation0)
-            
+            time.sleep(0.5)
             
             qValues0 = deepQ.getQValues(observation0)
         
