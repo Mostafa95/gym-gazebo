@@ -23,6 +23,8 @@ from keras.regularizers import l2
 import memory
 import rospy
 from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import Odometry
+
 
 class DeepQ:
     """
@@ -284,43 +286,17 @@ def callback(data):
         #rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
         print len(data.data)
 
-def initMapSubscriber():
+def init_MapSubscriber():
     #rospy.init_node('Maplistener', anonymous=True)
     rospy.Subscriber("/map", OccupancyGrid,  callback) 
     #rospy.spin()
 
-def Get_Observ(TurtleBot_path, Turtle_Num):
-    params_json = str(TurtleBot_path) + str(Turtle_Num) + '.json'
-    observation =  []
-    with open(params_json) as outfile:
-        d = json.load(outfile)
-        observation = d.get('obervation')
+def odometryCb(msg):
+    x= msg.pose.pose
+
+def init_OdomSubscriber():
+    rospy.Subscriber('odom',Odometry,odometryCb)
     
-    return observation
-
-def Get_All(TurtleBot_path, Turtle_Num):
-    params_json = str(TurtleBot_path) + str(Turtle_Num) + '.json'
-
-    with open(params_json) as outfile:
-        d = json.load(outfile)
-        observation = d.get('obervation')
-        reward = d.get('reward')
-        done = d.get('done')
-        info = d.get('info')
-
-    return observation,reward,done,info
-
-def Write_Action(TurtleBot_path, Turtle_Num,Action):
-    ob = 0
-    re = 0
-    do = 0
-    info = 0 
-    parameter_keys = ['obervation','reward','done','info','action']
-    parameter_values = [ob, re, do, info, Action] 
-    parameter_dictionary = dict(zip(parameter_keys, parameter_values))
-    fileName =  str(TurtleBot_path) + str(Turtle_Num) + '.json'
-    with open(fileName, 'w') as outfile:
-        json.dump(parameter_dictionary, outfile)
 
 
 if __name__ == '__main__':
@@ -333,9 +309,9 @@ if __name__ == '__main__':
     #continue_execution = True  
     #fill this if continue_execution=True
 
-    weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300.h5'
-    monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300'
-    params_json  = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300.json'
+    weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1200.h5'
+    monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1200'
+    params_json  = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1200.json'
 
     TurtleBot_info_path = '/home/mostafa/GP_Training/TurtleBot/'
     
@@ -370,17 +346,15 @@ if __name__ == '__main__':
     start_time = time.time()
     f=True
     #start iterating from 'current epoch'.
-
+    # init_OdomSubscriber()
+    time.sleep(20)
     for epoch in xrange(current_epoch+1, epochs+1, 1):
         observation0 = env.reset()
-        observation1 = Get_Observ(TurtleBot_info_path,1)
-        #print "Observation",observation1
         cumulated_reward0 = 0
-        cumulated_reward1 = 0
-
+        
         # number of timesteps
         t=1
-        time.sleep(2)
+        
         while( t > 0 ):
             
             # if f == True:
@@ -392,23 +366,14 @@ if __name__ == '__main__':
                 observation0 = observation0[0]
             observation0 = np.asarray(observation0)
             
-            if type(observation1[1]) == bool :
-                observation1 = observation1[0]
-            observation1 = np.asarray(observation1)
-            
             
             qValues0 = deepQ.getQValues(observation0)
-            qValues1 = deepQ.getQValues(observation1)
-
+        
             action0 = deepQ.selectAction_ForTesting(qValues0)
-            action1 = deepQ.selectAction_ForTesting(qValues1)
-
-            Write_Action(TurtleBot_info_path, 1, action1)
+        
             newObservation0, reward0, done0, info0 = env.step(action0)
-            newObservation1, reward1, done1, info1 = Get_All(TurtleBot_info_path, 1)
-
+        
             cumulated_reward0 += reward0
-            cumulated_reward1 += reward1
             
 
             #deepQ.addMemory(observation, action, reward, newObservation, done)
@@ -423,15 +388,12 @@ if __name__ == '__main__':
             #         deepQ.learnOnMiniBatch(minibatch_size, True)
 
             observation0 = newObservation0
-            observation1 = newObservation1
 
             if done0:
                 print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - Cumulated0 R: "+str(cumulated_reward0))   
-            if done1:
-                 print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - Cumulated1 R: "+str(cumulated_reward1))     
-                 #break
-            t = t+1
-           
+                break
+
+            
             # if (time.time() - start_time) >= 10 and f ==True:
             #     initMapSubscriber()
             #     f=  False

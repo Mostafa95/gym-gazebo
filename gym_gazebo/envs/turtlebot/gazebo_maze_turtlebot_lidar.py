@@ -18,8 +18,7 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
     def __init__(self):
         # Launch the simulation with the given launchfile name
         gazebo_env.GazeboEnv.__init__(self, "GazeboMazeTurtlebotLidar_v0.launch")
-        self.vel_pub = rospy.Publisher('/turtlebot1/mobile_base/commands/velocity', Twist, queue_size=5)#2ayyyyyyy
-        self.vel_pub1 = rospy.Publisher('/turtlebot2/mobile_base/commands/velocity', Twist, queue_size=5)#2ayyyyyyy
+        self.vel_pub = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=5)#2ayyyyyyy
         
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
@@ -81,45 +80,24 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
 
 
         factor = 1
-        
+        print action
         vel_cmd = Twist()
         if action == 0: #FORWARD
             vel_cmd.linear.x = 0.5*factor
-            vel_cmd.angular.z = 0.0
+            vel_cmd.angular.z = 0
             
         elif action == 1: #LEFT
             vel_cmd.linear.x = 0.05*factor
-            vel_cmd.angular.z = 0.6
-           
+            vel_cmd.angular.z = 0.3
+
+
         elif action == 2: #RIGHT
             vel_cmd.linear.x = 0.05*factor
-            vel_cmd.angular.z = -0.6
-        self.vel_pub.publish(vel_cmd)    
+            vel_cmd.angular.z = 0.3
 
-    def Take_Action1(self,action):
-        rospy.wait_for_service('/gazebo/unpause_physics')
-        try:
-            self.unpause()
-        except (rospy.ServiceException) as e:
-            print ("/gazebo/unpause_physics service call failed")
+        self.vel_pub.publish(vel_cmd) 
 
 
-        factor = 1
-        
-        vel_cmd1 = Twist()
-        if action == 0: #FORWARD
-            vel_cmd1.linear.x = 0.5*factor
-            vel_cmd1.angular.z = 0.0
-            
-        elif action == 1: #LEFT
-            vel_cmd1.linear.x = 0.05*factor
-            vel_cmd1.angular.z = 0.6
-           
-        elif action == 2: #RIGHT
-            vel_cmd1.linear.x = 0.05*factor
-            vel_cmd1.angular.z = -0.6
-        self.vel_pub1.publish(vel_cmd1) 
-            
     def reverse_Action(self,action):
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
@@ -128,46 +106,24 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
             print ("/gazebo/unpause_physics service call failed")
 
 
-        factor = 2
+        factor = 1
         vel_cmd = Twist()
         if action == 0: #FORWARD then go back
-            vel_cmd.linear.x = -3.0*factor
-            vel_cmd.angular.z = -1.0
+            vel_cmd.linear.x = -0.2*factor
+            vel_cmd.angular.z = -4.0
             
         elif action == 1: #LEFT then go right
-            vel_cmd.linear.x = -3.0*factor
-            vel_cmd.angular.z = -1.0
+            vel_cmd.linear.x = -0.2*factor
+            vel_cmd.angular.z = -4.0
            
         elif action == 2: #RIGHT then 
-            vel_cmd.linear.x = -3.0*factor
-            vel_cmd.angular.z = 1.0
+            vel_cmd.linear.x = -0.2*factor
+            vel_cmd.angular.z = -4.0
         
         self.vel_pub.publish(vel_cmd)    
 
 
-    def reverse_Action1(self,action):
-        rospy.wait_for_service('/gazebo/unpause_physics')
-        try:
-            self.unpause()
-        except (rospy.ServiceException) as e:
-            print ("/gazebo/unpause_physics service call failed")
-
-
-        factor = 2
-        vel_cmd = Twist()
-        if action == 0: #FORWARD then go back
-            vel_cmd.linear.x = -3.0*factor
-            vel_cmd.angular.z = -1.0
-            
-        elif action == 1: #LEFT then go right
-            vel_cmd.linear.x = -3.0*factor
-            vel_cmd.angular.z = -1.0
-           
-        elif action == 2: #RIGHT then 
-            vel_cmd.linear.x = -3.0*factor
-            vel_cmd.angular.z = 1.0
-        
-        self.vel_pub1.publish(vel_cmd)    
+    
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -175,32 +131,18 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
 
     def _step(self, action):
         
-        action1 = self.Get_Action(1)
         self.Take_Action(action)
-        self.Take_Action1(action1)
-
+        
         # first agent
         data = None
         while data is None:
             try:
                 data = rospy.wait_for_message('/scan', LaserScan, timeout=5)
-                if data.header.frame_id !=  "robot1_tf/sonar2_link":
-                    data = None
+               
             except:
                 pass
 
                
-        #second agent
-        data1 = None
-        while data1 is None:
-            try:
-                data1 = rospy.wait_for_message('/scan', LaserScan, timeout=5)
-                if data1.header.frame_id !=  "robot2_tf/sonar2_link":
-                    data1 = None
-            except:
-                pass
-
-             
         
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
@@ -211,8 +153,7 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
 
         state,done = self.calculate_observation(data)
       
-        state1,done1 = self.calculate_observation(data1)
-
+        
         terminated = False
         if not done:
             if action == 0:
@@ -221,23 +162,13 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
                 reward = 1
         else:
             reward = -200
-            terminated = True
-            print "Revered0 !! "
-            self.reverse_Action(action)
-            
-        terminated1 = False
-        if not done1:
-            if action1 == 0:
-                reward1 = 5
-            else:
-                reward1 = 1
-        else:
-            reward1 = -200
-            terminated1 = True
-            self.reverse_Action1(action)
-
-        self.Write_All(state1, reward, done1, [terminated1], 1)
-        return state, reward, False, [terminated]
+            # time.sleep(2)
+            # terminated = True
+            # print "Revered0 !! "
+            # self.reverse_Action(action)
+            # time.sleep(2)
+        
+        return state, reward, done, [terminated]
 
     def _reset(self):
 
@@ -262,18 +193,7 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         while data is None:
             try:
                 data = rospy.wait_for_message('/scan', LaserScan, timeout=5)
-                if data.header.frame_id !=  "robot1_tf/sonar2_link":
-                    data = None
-            except:
-                pass
-
-        
-        data1 = None
-        while data1 is None:
-            try:
-                data1 = rospy.wait_for_message('/scan', LaserScan, timeout=5)
-                if data1.header.frame_id !=  "robot2_tf/sonar2_link":
-                    data1 = None
+                
             except:
                 pass
 
@@ -286,40 +206,6 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
             print ("/gazebo/pause_physics service call failed")
 
         state = self.calculate_observation(data)
-        state1 = self.calculate_observation(data1)
-
-        self.Write_Observ(state1, 1)
+        
         return state
-
-    def Write_Observ(self, observarion, Turtle_Num, TurtleBot_path = '/home/mostafa/GP_Training/TurtleBot/'):
-        re = 0
-        do = 0
-        info = 0
-        Action = 0
-        parameter_keys = ['obervation','reward','done','info','action']
-        parameter_values = [observarion, re, do, info, Action] 
-        parameter_dictionary = dict(zip(parameter_keys, parameter_values))
-        fileName =  str(TurtleBot_path) +  str(Turtle_Num) + '.json'
-
-        with open(fileName, 'w') as outfile:
-            json.dump(parameter_dictionary, outfile)
-
-    def Write_All(self, state, reward, done, info , Turtle_Num, TurtleBot_path = '/home/mostafa/GP_Training/TurtleBot/'):
-        Action = 0
-        parameter_keys = ['obervation','reward','done','info','action']
-        parameter_values = [state, reward, done, info, Action] 
-        parameter_dictionary = dict(zip(parameter_keys, parameter_values))
-        fileName =  str(TurtleBot_path) + str(Turtle_Num) + '.json'
-        with open(fileName, 'w') as outfile:
-            json.dump(parameter_dictionary, outfile)
-
-
-    def Get_Action(self,Turtle_Num, TurtleBot_path = '/home/mostafa/GP_Training/TurtleBot/'):
-        params_json = str(TurtleBot_path) + str(Turtle_Num) + '.json'
-
-        with open(params_json) as outfile:
-            d = json.load(outfile)
-            Action = d.get('action')
-
-        return Action
 
