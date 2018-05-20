@@ -18,7 +18,7 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
     def __init__(self):
         # Launch the simulation with the given launchfile name
         gazebo_env.GazeboEnv.__init__(self, "GazeboMazeTurtlebotLidar_v0.launch")
-        self.vel_pub = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=5)#2ayyyyyyy
+        self.vel_pub = rospy.Publisher('dcsc/mobile_base/commands/velocity', Twist, queue_size=5)#2ayyyyyyy
         
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
@@ -80,22 +80,21 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
 
 
         factor = 1
-        print action
         vel_cmd = Twist()
         if action == 0: #FORWARD
             vel_cmd.linear.x = 0.5*factor
-            vel_cmd.angular.z = 0
+            vel_cmd.angular.z = 0.0
             
         elif action == 1: #LEFT
             vel_cmd.linear.x = 0.05*factor
-            vel_cmd.angular.z = 0.3
-
+            vel_cmd.angular.z = 0.6           
 
         elif action == 2: #RIGHT
             vel_cmd.linear.x = 0.05*factor
-            vel_cmd.angular.z = 0.3
+            vel_cmd.angular.z = -0.6
+        self.vel_pub.publish(vel_cmd)   
 
-        self.vel_pub.publish(vel_cmd) 
+
 
 
     def reverse_Action(self,action):
@@ -106,19 +105,19 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
             print ("/gazebo/unpause_physics service call failed")
 
 
-        factor = 1
+        factor = 0
         vel_cmd = Twist()
         if action == 0: #FORWARD then go back
-            vel_cmd.linear.x = -0.2*factor
-            vel_cmd.angular.z = -4.0
+            vel_cmd.linear.x = 0#-0.2*factor
+            vel_cmd.angular.z = -3.0
             
         elif action == 1: #LEFT then go right
-            vel_cmd.linear.x = -0.2*factor
-            vel_cmd.angular.z = -4.0
+            vel_cmd.linear.x = 0#-0.2*factor
+            vel_cmd.angular.z = -3.0
            
         elif action == 2: #RIGHT then 
-            vel_cmd.linear.x = -0.2*factor
-            vel_cmd.angular.z = -4.0
+            vel_cmd.linear.x = 0#-0.2*factor
+            vel_cmd.angular.z = -3.0
         
         self.vel_pub.publish(vel_cmd)    
 
@@ -163,12 +162,12 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         else:
             reward = -200
             # time.sleep(2)
-            # terminated = True
-            # print "Revered0 !! "
-            # self.reverse_Action(action)
+            terminated = True
+            print "Revered0 !! "
+            self.reverse_Action(action)
             # time.sleep(2)
         
-        return state, reward, done, [terminated]
+        return state, reward, False, [terminated]
 
     def _reset(self):
 

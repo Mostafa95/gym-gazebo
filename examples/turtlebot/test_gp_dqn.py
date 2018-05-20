@@ -309,9 +309,9 @@ if __name__ == '__main__':
     #continue_execution = True  
     #fill this if continue_execution=True
 
-    weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1200.h5'
-    monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1200'
-    params_json  = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1200.json'
+    weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1400.h5'
+    monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1400'
+    params_json  = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1400.json'
 
     TurtleBot_info_path = '/home/mostafa/GP_Training/TurtleBot/'
     
@@ -347,7 +347,7 @@ if __name__ == '__main__':
     f=True
     #start iterating from 'current epoch'.
     # init_OdomSubscriber()
-    time.sleep(20)
+    # time.sleep(20)
     for epoch in xrange(current_epoch+1, epochs+1, 1):
         observation0 = env.reset()
         cumulated_reward0 = 0
