@@ -333,9 +333,9 @@ if __name__ == '__main__':
     #continue_execution = True  
     #fill this if continue_execution=True
 
-    weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300.h5'
-    monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300'
-    params_json  = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1300.json'
+    weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1500.h5'
+    monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1500'
+    params_json  = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1500.json'
 
     TurtleBot_info_path = '/home/mostafa/GP_Training/TurtleBot/'
     

@@ -7,7 +7,7 @@
   <arg name="headless" value="true"/> 
   <arg name="stacks"    value="$(optenv TURTLEBOT_STACKS hexagons)"/>  <!-- circles, hexagons --> 
   <arg name="3d_sensor" value="$(optenv TURTLEBOT_3D_SENSOR kinect)"/>  <!-- kinect, asus_xtion_pro --> 
-  <arg name="x" default="-4"/>
+  <arg name="x" default="0"/>
   <arg name="y" default="0"/>
   <arg name="z" default="0.1"/>
   <arg name="ns" default="" />
@@ -58,8 +58,8 @@
   <group ns="turtlebot2">
     <param name="tf_prefix" value="robot2_tf"/>
     <include file="$(find turtlebot_gazebo)/launch/spawn_turtlebot.launch">
-      <arg name="x" default="0"/>
-      <arg name="y" default="-5"/>
+      <arg name="x" default="-1"/>
+      <arg name="y" default="0"/>
       <arg name="z" default="$(arg z)"/>
       <arg name="tf_prefix" value="robot2_tf" />
       <arg name="ns" value="turtlebot2" />

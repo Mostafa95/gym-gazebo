@@ -3,13 +3,14 @@ import rospy
 import roslaunch
 import time
 import numpy as np
-
+import math
 from gym import utils, spaces
 from gym_gazebo.envs import gazebo_env
 from geometry_msgs.msg import Twist
 from std_srvs.srv import Empty
 
 from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import Odometry
 
 from gym.utils import seeding
 import json
@@ -21,6 +22,10 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         self.vel_pub = rospy.Publisher('/turtlebot1/mobile_base/commands/velocity', Twist, queue_size=5)#2ayyyyyyy
         self.vel_pub1 = rospy.Publisher('/turtlebot2/mobile_base/commands/velocity', Twist, queue_size=5)#2ayyyyyyy
         
+        self.start = [0,0] 
+        self.start1 = [0,-1] 
+        self.odom = [0,0]
+        self.odom1 = [0,0]
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
         self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
@@ -28,6 +33,38 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         self.action_space = spaces.Discrete(3) #F,L,R
         self.reward_range = (-np.inf, np.inf)
         self._seed()
+
+    def odometryCb(self,msg):
+        self.odom[0]= msg.pose.pose.position.x
+        self.odom[1]= msg.pose.pose.position.y
+
+    def get_OdomSubscriber(self):
+        rospy.Subscriber('/turtlebot1/odom',Odometry,self.odometryCb)
+    
+    def odometryCb1(self,msg):
+        self.odom1[0]= msg.pose.pose.position.x
+        self.odom1[1]= msg.pose.pose.position.y
+
+    def get_OdomSubscriber1(self):
+        rospy.Subscriber('/turtlebot2/odom',Odometry,self.odometryCb1)
+        
+    def check_dist(self):
+        self.get_OdomSubscriber()
+        self.get_OdomSubscriber1()
+
+        pos = [0,0]
+        pos1 = [0,0]
+
+        pos[0] = self.start[0] + self.odom[0]
+        pos[1] = self.start[1] + self.odom[1]
+        pos1[0] = self.start1[0] + self.odom1[0]
+        pos1[1] = self.start1[1] + self.odom1[1]
+
+        d = math.sqrt( (pos[0] - pos1[0])*(pos[0] - pos1[0]) + (pos[1] - pos1[1])*(pos[1] - pos1[1]))
+        print "DIST ",d
+        if d <= 2.0:
+            return False
+        return True
 
     def discretize_observation(self,data,new_ranges = 100):
         discretized_ranges = []
@@ -144,7 +181,6 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         
         self.vel_pub.publish(vel_cmd)    
 
-
     def reverse_Action1(self,action):
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
@@ -174,10 +210,15 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         return [seed]
 
     def _step(self, action):
-        
-        action1 = self.Get_Action(1)
+       
+        use2 = self.check_dist() 
+        if use2:
+            action1 = self.Get_Action(1)
+            self.Take_Action1(action1)
+        else :
+            print "STOOOOOOOOOOP"
         self.Take_Action(action)
-        self.Take_Action1(action1)
+        
 
         # first agent
         data = None
@@ -222,21 +263,27 @@ class GazeboMazeTurtlebotLidarEnv(gazebo_env.GazeboEnv):
         else:
             reward = -200
             terminated = True
-            print "Revered0 !! "
+            time.sleep(1)
+            print "Revered000 !! "
             self.reverse_Action(action)
-            
-        terminated1 = False
-        if not done1:
-            if action1 == 0:
-                reward1 = 5
+            time.sleep(1)
+        if use2:
+            terminated1 = False
+            if not done1:
+                if action1 == 0:
+                    reward1 = 5
+                else:
+                    reward1 = 1
             else:
-                reward1 = 1
-        else:
-            reward1 = -200
-            terminated1 = True
-            self.reverse_Action1(action)
-
-        self.Write_All(state1, reward, done1, [terminated1], 1)
+                reward1 = -200
+                time.sleep(1)
+                terminated1 = True
+                print "Revered111 !! "
+                self.reverse_Action1(action)
+                time.sleep(1)
+            self.Write_All(state1, reward1, done1, [terminated1], 1)
+        else :
+            self.Write_All(state1, 0, False, [False], 1)
         return state, reward, False, [terminated]
 
     def _reset(self):
