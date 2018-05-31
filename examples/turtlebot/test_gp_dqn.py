@@ -325,13 +325,9 @@ def Write_Action(TurtleBot_path, Turtle_Num,Action):
 
 if __name__ == '__main__':
 
-    #REMEMBER!: turtlebot_nn_setup.bash must be executed.
     env = gym.make('GazeboMazeTurtlebotLidar-v0') #GazeboCircuit2TurtlebotLidar-v0 GazeboCircuit2TurtlebotLidar-v0
    
     outdir = '/home/mostafa/GP_Training/gazebo_gym_experiments/'
-
-    #continue_execution = True  
-    #fill this if continue_execution=True
 
     weights_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1500.h5'
     monitor_path = '/home/mostafa/GP_Training/turtle_c2_dqn_ep1500'
@@ -339,9 +335,6 @@ if __name__ == '__main__':
 
     TurtleBot_info_path = '/home/mostafa/GP_Training/TurtleBot/'
     
-    
-    #Load weights, monitor info and parameter info.
-    #ADD TRY CATCH fro this else
     with open(params_json) as outfile:
         d = json.load(outfile)
         epochs = d.get('epochs')
@@ -362,25 +355,21 @@ if __name__ == '__main__':
     deepQ.initNetworks(network_structure)
     deepQ.loadWeights(weights_path)
 
-
-    clear_monitor_files(outdir)
-    copy_tree(monitor_path,outdir)
-    env = gym.wrappers.Monitor(env, directory=outdir, force=True, write_upon_reset=True)
-
     start_time = time.time()
     f=True
-    #start iterating from 'current epoch'.
-
+    
     for epoch in xrange(current_epoch+1, epochs+1, 1):
-        observation0 = env.reset()
-        observation1 = Get_Observ(TurtleBot_info_path,1)
+        observation1 = env.reset()
+        observation2 = Get_Observ(TurtleBot_info_path,2)
+        observation3 = Get_Observ(TurtleBot_info_path,3)
+        
         #print "Observation",observation1
-        cumulated_reward0 = 0
         cumulated_reward1 = 0
-
+        cumulated_reward2 = 0
+        cumulated_reward3 = 0
         # number of timesteps
         t=1
-        time.sleep(2)
+        time.sleep(8)
         while( t > 0 ):
             
             # if f == True:
@@ -388,61 +377,41 @@ if __name__ == '__main__':
             #     f = False
             # else :
             #     time.sleep(0.5)    
-            if type(observation0[1]) == bool :
-                observation0 = observation0[0]
-            observation0 = np.asarray(observation0)
-            
             if type(observation1[1]) == bool :
                 observation1 = observation1[0]
             observation1 = np.asarray(observation1)
             
+            if type(observation2[1]) == bool :
+                observation2 = observation2[0]
+            observation2 = np.asarray(observation2)
             
-            qValues0 = deepQ.getQValues(observation0)
+            if type(observation3[1]) == bool :
+                observation3 = observation3[0]
+            observation3 = np.asarray(observation3)
+            
+            
             qValues1 = deepQ.getQValues(observation1)
+            qValues2 = deepQ.getQValues(observation2)
+            qValues3 = deepQ.getQValues(observation3)
 
-            action0 = deepQ.selectAction_ForTesting(qValues0)
             action1 = deepQ.selectAction_ForTesting(qValues1)
+            action2 = deepQ.selectAction_ForTesting(qValues2)
+            action3 = deepQ.selectAction_ForTesting(qValues3)
 
-            Write_Action(TurtleBot_info_path, 1, action1)
-            newObservation0, reward0, done0, info0 = env.step(action0)
-            newObservation1, reward1, done1, info1 = Get_All(TurtleBot_info_path, 1)
+            Write_Action(TurtleBot_info_path, 2, action2)
+            Write_Action(TurtleBot_info_path, 3, action3)
 
-            cumulated_reward0 += reward0
+            newObservation1, reward1, done1, info1 = env.step(action1)
+            newObservation2, reward2, done2, info2 = Get_All(TurtleBot_info_path, 2)
+            newObservation3, reward3, done3, info3 = Get_All(TurtleBot_info_path, 3)
+
             cumulated_reward1 += reward1
+            cumulated_reward2 += reward2
+            cumulated_reward3 += reward3
             
 
-            #deepQ.addMemory(observation, action, reward, newObservation, done)
-
-            # if stepCounter == learnStart:
-            #     print("Starting learning")
-                
-            # if stepCounter >= learnStart:
-            #     if stepCounter <= updateTargetNetwork:
-            #         deepQ.learnOnMiniBatch(minibatch_size, False)
-            #     else :
-            #         deepQ.learnOnMiniBatch(minibatch_size, True)
-
-            observation0 = newObservation0
             observation1 = newObservation1
+            observation2 = newObservation2
+            observation3 = newObservation3
 
-            if done0:
-                print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - Cumulated0 R: "+str(cumulated_reward0))   
-            if done1:
-                 print ("EP "+str(epoch)+" - {} timesteps".format(t+1)+" - Cumulated1 R: "+str(cumulated_reward1))     
-                 #break
-            t = t+1
-           
-            # if (time.time() - start_time) >= 10 and f ==True:
-            #     initMapSubscriber()
-            #     f=  False
-            #stepCounter += 1
-            # if stepCounter % updateTargetNetwork == 0:
-            #     deepQ.updateTargetNetwork()
-            #     print ("updating target network")
-
-        # explorationRate *= 0.995 #epsilon decay
-        # # explorationRate -= (2.0/epochs)
-        # explorationRate = max (0.05, explorationRate, explorationRate)
-
-    #env.monitor.close()
     env.close()

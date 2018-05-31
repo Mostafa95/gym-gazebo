@@ -58,8 +58,8 @@
   <group ns="turtlebot2">
     <param name="tf_prefix" value="robot2_tf"/>
     <include file="$(find turtlebot_gazebo)/launch/spawn_turtlebot.launch">
-      <arg name="x" default="-1"/>
-      <arg name="y" default="0"/>
+      <arg name="x" default="4"/>
+      <arg name="y" default="-4"/>
       <arg name="z" default="$(arg z)"/>
       <arg name="tf_prefix" value="robot2_tf" />
       <arg name="ns" value="turtlebot2" />
@@ -68,6 +68,18 @@
 
   </group>     
  
+  <group ns="turtlebot3">
+    <param name="tf_prefix" value="robot3_tf"/>
+    <include file="$(find turtlebot_gazebo)/launch/spawn_turtlebot.launch">
+      <arg name="x" default="0"/>
+      <arg name="y" default="-4"/>
+      <arg name="z" default="$(arg z)"/>
+      <arg name="tf_prefix" value="robot3_tf" />
+      <arg name="ns" value="turtlebot3" />
+      <arg name="name" value="Turtlebot3"/>
+    </include>
+
+  </group>  
 
 </launch>
 
